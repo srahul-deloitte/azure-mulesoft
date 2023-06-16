@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:azure-storage="http://www.mulesoft.org/schema/mule/azure-storage"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/azure-storage http://www.mulesoft.org/schema/mule/azure-storage/current/mule-azure-storage.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
+	<azure-storage:config name="Azure_Storage_Config" doc:name="Azure Storage Config" doc:id="9b603337-e847-4b65-9808-c0029f7ee30b" >
+		<azure-storage:access-key-azure-connection accountName="example-container" accountKey="DefaultEndpointsProtocol=https;AccountName=miniassignmentstorage;AccountKey=oeDEZJqsV9TGv/ON7mGSjQMZGgzRjFcC72LQRzN1G10TkKzXOtyn1XXD26shGEx3/HWS5siabK1b+AStITEjwA==;EndpointSuffix=core.windows.net" />
+	</azure-storage:config>
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="45732cb3-dd59-4425-ba42-2a112263d368" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<flow name="uploadFile" doc:id="63d0cfc8-5918-47a6-9829-c0eeb17fcac7" >
+		<http:listener doc:name="Listener" doc:id="979c757c-34ba-485d-a8e8-1228288cbfe3" config-ref="HTTP_Listener_config" path="/api/blob/upload"/>
+		<logger level="INFO" doc:name="Upload process starts" doc:id="bf328f28-fe10-4f70-a66c-d8deaead928d" message="Before uploading the file"/>
+		<azure-storage:upload-blob doc:name="Upload blob" doc:id="8495218e-32da-435f-941b-c9dafd97f843" config-ref="Azure_Storage_Config">
+			<azure-storage:storblob container='#["example-container"]' fileName='#["file.json"]' fileStream="#[payload]"/>
+		</azure-storage:upload-blob>
+		<ee:transform doc:name="Response" doc:id="b7dc5a1b-5a9b-4c16-b91f-81b949f1d524" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Upload process ends" doc:id="f1bcd1aa-533d-4906-9fb7-4e9976485f83" message="After uploading the file"/>
+	</flow>
+	<flow name="downloadFile" doc:id="d2148a24-9d19-4644-96dc-c01df998588d" >
+		<http:listener doc:name="Listener" doc:id="af671ec9-ba38-4bfd-a555-f88426bbc300" config-ref="HTTP_Listener_config" path="/api/blob/download"/>
+		<logger level="INFO" doc:name="Download process starts" doc:id="c8ed71a8-313c-4ce2-96f4-53e46275163a" message="Downloading of file starts"/>
+		<azure-storage:download-blob doc:name="Download blob" doc:id="378fec8e-49e6-4365-a998-aa806302de3e" config-ref="Azure_Storage_Config">
+			<azure-storage:blob container='#["example-container"]' fileName='#["file.json"]'/>
+		</azure-storage:download-blob>
+		<logger level="INFO" doc:name="Download process ends" doc:id="af5ddaba-5a2f-4daa-be19-73e11f85cc93" message="Downloading of file ends"/>
+	</flow>
+	<flow name="updateFile" doc:id="e55b1ffd-bd0f-46a4-9c9c-906f552483f4" >
+		<http:listener doc:name="Listener" doc:id="49d348ff-9c59-44f3-adf0-08844db1cd1f" config-ref="HTTP_Listener_config" path="/api/blob/update"/>
+		<logger level="INFO" doc:name="Update process starts" doc:id="4ba049b3-6c09-4595-af3f-1fa0ea8791f2" message="Updating of file starts"/>
+		<azure-storage:upload-blob doc:name="Update blob" doc:id="89b91761-77fe-4b6d-b2f8-6fd611167557" config-ref="Azure_Storage_Config">
+			<azure-storage:storblob container='#["example-container"]' fileName='#["file.json"]' fileStream="#[payload]" />
+		</azure-storage:upload-blob>
+		<ee:transform doc:name="Response" doc:id="ac0901a6-07c2-4228-9166-7b130844e510" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Update process ends" doc:id="eb8acfa0-a001-4093-ac81-1cd983322235" message="Updating of file ends"/>
+	</flow>
+	<flow name="deleteFile" doc:id="69744c5f-5852-4d0b-8f8d-635767a98b7a" >
+		<http:listener doc:name="Listener" doc:id="5b827689-81a9-4425-bfb2-931940b121b7" config-ref="HTTP_Listener_config" path="/api/blob/delete"/>
+		<logger level="INFO" doc:name="Deletion process starts" doc:id="83ab01a3-9a27-412a-9753-92275d26473e" message="Deletion of file starts"/>
+		<azure-storage:delete-blob doc:name="Delete blob" doc:id="be2f83f0-f4a0-433f-aa12-646dbfe79fc6" config-ref="Azure_Storage_Config">
+			<azure-storage:blob container='#["example-container"]' fileName='#["file.json"]' />
+		</azure-storage:delete-blob>
+		<ee:transform doc:name="Response" doc:id="e7873259-5d9d-4433-80d6-01ea968e50b1" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Deletion process ends" doc:id="29454314-45e8-4e18-bfa6-dbdc8bd5b09f" message="Deletion of file ends"/>
+	</flow>
+</mule>
